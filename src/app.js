@@ -1,3 +1,4 @@
+import { animateIteration } from "./animate.js";
 import { MAZES } from "./maze.js";
 import { MCTS } from "./mcts.js";
 import { MazeRenderer } from "./render-maze.js";
@@ -52,11 +53,26 @@ function renderAll() {
   else statPV.style.color = "";
 }
 
-document.getElementById("btn-step").addEventListener("click", () => {
-  statPhase.textContent = "running";
-  for (const _ev of mcts.iterate()) {}
-  statPhase.textContent = "idle";
-  renderAll();
+let busy = false;
+const setButtonsEnabled = (enabled) => {
+  for (const id of ["btn-step", "btn-run10", "btn-runend", "btn-reset"]) {
+    document.getElementById(id).disabled = !enabled;
+  }
+};
+
+document.getElementById("btn-step").addEventListener("click", async () => {
+  if (busy) return;
+  busy = true;
+  setButtonsEnabled(false);
+  await animateIteration(mcts, {
+    mazeRenderer,
+    treeRenderer,
+    getMaze: currentMaze,
+    setPhase: (p) => (statPhase.textContent = p),
+    setStats: renderAll, // updates stats only; full re-render already done
+  });
+  setButtonsEnabled(true);
+  busy = false;
 });
 document.getElementById("btn-run10").addEventListener("click", () => {
   for (let i = 0; i < 10; i++) for (const _ev of mcts.iterate()) {}
