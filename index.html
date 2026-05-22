@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <title>MCTS Maze Demo</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js" defer></script>
+  <script type="module" src="src/app.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>MCTS Maze Demo</h1>
+    <div id="status-bar">
+      <span>Iter: <span id="stat-iter">0</span></span>
+      <span>Tree nodes: <span id="stat-nodes">1</span></span>
+      <span>PV len: <span id="stat-pv">0</span></span>
+      <span>Phase: <span id="stat-phase">idle</span></span>
+    </div>
+    <button id="theme-toggle" title="Toggle theme">🌓</button>
+  </header>
+
+  <main>
+    <section id="maze-pane">
+      <canvas id="maze-canvas" width="600" height="600"></canvas>
+    </section>
+    <section id="tree-pane">
+      <svg id="tree-svg" width="600" height="600"></svg>
+    </section>
+  </main>
+
+  <footer id="controls">
+    <div class="control-row">
+      <label>Maze size:
+        <select id="ctl-size">
+          <option value="10" selected>10×10</option>
+          <option value="15">15×15</option>
+          <option value="20">20×20</option>
+        </select>
+      </label>
+      <label>Reward:
+        <select id="ctl-reward">
+          <option value="shaped" selected>Distance-shaped</option>
+          <option value="winloss">Pure win/loss</option>
+        </select>
+      </label>
+    </div>
+    <div class="control-row">
+      <label>UCB1 C: <input type="range" id="ctl-c" min="0" max="3" step="0.01" value="1.41" />
+        <span id="ctl-c-val">1.41</span>
+      </label>
+      <label>Rollout horizon: <input type="range" id="ctl-horizon" min="1" max="80" step="1" value="40" />
+        <span id="ctl-horizon-val">40</span>
+      </label>
+    </div>
+    <div class="control-row">
+      <button id="btn-step">Step</button>
+      <button id="btn-run10">Run 10</button>
+      <button id="btn-runend">Run to end</button>
+      <button id="btn-reset">Reset</button>
+    </div>
+  </footer>
+</body>
+</html>
