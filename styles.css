@@ -97,3 +97,20 @@ select, button {
 button:hover { border-color: var(--muted); }
 button:active { background: var(--panel); }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+#debug-panel {
+  position: fixed;
+  right: 12px;
+  bottom: 80px;
+  width: 320px;
+  max-height: 50vh;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  font: 12px ui-monospace, monospace;
+  z-index: 999;
+}
+#debug-panel h3 { margin: 0 0 8px; font-size: 13px; }
+#debug-panel pre { margin: 0 0 8px; white-space: pre-wrap; }

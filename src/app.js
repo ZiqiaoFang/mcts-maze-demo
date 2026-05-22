@@ -4,6 +4,9 @@ import { MCTS } from "./mcts.js";
 import { MazeRenderer } from "./render-maze.js";
 import { TreeRenderer } from "./render-tree.js";
 
+const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
+if (DEBUG) document.getElementById("debug-panel").hidden = false;
+
 const canvas = document.getElementById("maze-canvas");
 const svg = document.getElementById("tree-svg");
 const sizeSel = document.getElementById("ctl-size");
@@ -51,6 +54,21 @@ function renderAll() {
   statPV.textContent = pv.length - 1;
   if (maze.isGoal(pv[pv.length - 1])) statPV.style.color = "#4ade80";
   else statPV.style.color = "";
+  updateDebug();
+}
+
+let lastRollout = null;
+function updateDebug() {
+  if (!DEBUG || !mcts) return;
+  const s = mcts.treeStats();
+  document.getElementById("debug-stats").textContent =
+    `iterations: ${mcts.iterationCount}\nnodes: ${s.totalNodes}\nmax depth: ${s.maxDepth}\nmax visits: ${s.maxVisits}`;
+  if (lastRollout) {
+    const start = lastRollout.positions[0];
+    const end = lastRollout.positions[lastRollout.positions.length - 1];
+    document.getElementById("debug-last-rollout").textContent =
+      `rollout:\n  start: (${start})\n  end:   (${end})\n  steps: ${lastRollout.positions.length - 1}\n  reward: ${lastRollout.reward.toFixed(3)}`;
+  }
 }
 
 let busy = false;
@@ -69,8 +87,13 @@ document.getElementById("btn-step").addEventListener("click", async () => {
     treeRenderer,
     getMaze: currentMaze,
     setPhase: (p) => (statPhase.textContent = p),
-    setStats: renderAll, // updates stats only; full re-render already done
+    setStats: renderAll,
+    onRollout: (ev) => {
+      lastRollout = ev;
+      updateDebug();
+    },
   });
+  updateDebug();
   setButtonsEnabled(true);
   busy = false;
 });
@@ -81,6 +104,7 @@ document.getElementById("btn-run10").addEventListener("click", () => {
   statPhase.textContent = "running 10";
   for (let i = 0; i < 10; i++) for (const _ev of mcts.iterate()) {}
   renderAll();
+  updateDebug();
   statPhase.textContent = "idle";
   setButtonsEnabled(true);
   busy = false;
@@ -104,6 +128,7 @@ document.getElementById("btn-runend").addEventListener("click", () => {
     if (stableCount >= 5) break;
   }
   renderAll();
+  updateDebug();
   statPhase.textContent = "idle";
   setButtonsEnabled(true);
   busy = false;
@@ -137,3 +162,18 @@ document.getElementById("theme-toggle").addEventListener("click", () => {
   html.dataset.theme = html.dataset.theme === "light" ? "dark" : "light";
   renderAll();
 });
+
+if (DEBUG) {
+  document.getElementById("debug-bench").addEventListener("click", () => {
+    const out = document.getElementById("debug-bench-out");
+    out.textContent = "running...";
+    setTimeout(() => {
+      const t0 = performance.now();
+      for (let i = 0; i < 1000; i++) for (const _ev of mcts.iterate()) {}
+      const t1 = performance.now();
+      out.textContent = `1000 iterations in ${(t1 - t0).toFixed(1)}ms (${((t1 - t0) / 1000).toFixed(3)}ms/iter)`;
+      renderAll();
+      updateDebug();
+    }, 10);
+  });
+}

@@ -8,7 +8,10 @@
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export async function animateIteration(mcts, { mazeRenderer, treeRenderer, getMaze, setPhase, setStats }) {
+export async function animateIteration(
+  mcts,
+  { mazeRenderer, treeRenderer, getMaze, setPhase, setStats, onRollout }
+) {
   const maze = getMaze();
   const gen = mcts.iterate();
 
@@ -34,6 +37,7 @@ export async function animateIteration(mcts, { mazeRenderer, treeRenderer, getMa
     } else if (ev.phase === "simulate") {
       setPhase("simulate");
       rolloutPositions = ev.positions;
+      if (typeof onRollout === "function") onRollout(ev);
       // Animate trail building up cell by cell.
       const total = rolloutPositions.length;
       const maxAnimatedSteps = 30;
