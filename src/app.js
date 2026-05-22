@@ -75,14 +75,43 @@ document.getElementById("btn-step").addEventListener("click", async () => {
   busy = false;
 });
 document.getElementById("btn-run10").addEventListener("click", () => {
+  if (busy) return;
+  busy = true;
+  setButtonsEnabled(false);
+  statPhase.textContent = "running 10";
   for (let i = 0; i < 10; i++) for (const _ev of mcts.iterate()) {}
   renderAll();
+  statPhase.textContent = "idle";
+  setButtonsEnabled(true);
+  busy = false;
 });
 document.getElementById("btn-runend").addEventListener("click", () => {
-  for (let i = 0; i < 500; i++) for (const _ev of mcts.iterate()) {}
+  if (busy) return;
+  busy = true;
+  setButtonsEnabled(false);
+  statPhase.textContent = "running to end";
+  const maze = currentMaze();
+  let stableCount = 0;
+  let lastPVKey = "";
+  for (let i = 0; i < 500; i++) {
+    for (const _ev of mcts.iterate()) {}
+    const pv = mcts.principalVariation();
+    const last = pv[pv.length - 1].position;
+    const pvKey = pv.map((n) => n.position.join(",")).join("|");
+    if (maze.isGoal(last) && pvKey === lastPVKey) stableCount++;
+    else stableCount = 0;
+    lastPVKey = pvKey;
+    if (stableCount >= 5) break;
+  }
   renderAll();
+  statPhase.textContent = "idle";
+  setButtonsEnabled(true);
+  busy = false;
 });
-document.getElementById("btn-reset").addEventListener("click", newMcts);
+document.getElementById("btn-reset").addEventListener("click", () => {
+  if (busy) return;
+  newMcts();
+});
 
 sizeSel.addEventListener("change", () => {
   const size = parseInt(sizeSel.value, 10);
