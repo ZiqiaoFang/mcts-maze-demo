@@ -131,3 +131,9 @@ hSlider.addEventListener("input", () => {
 });
 
 newMcts();
+
+document.getElementById("theme-toggle").addEventListener("click", () => {
+  const html = document.documentElement;
+  html.dataset.theme = html.dataset.theme === "light" ? "dark" : "light";
+  renderAll();
+});
