@@ -1,5 +1,8 @@
+let _nodeIdCounter = 0;
+
 export class Node {
   constructor(position, parent, action) {
+    this.id = _nodeIdCounter++;
     this.position = position;
     this.parent = parent;
     this.action = action; // [dr, dc] taken from parent to reach here

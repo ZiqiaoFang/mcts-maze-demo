@@ -72,7 +72,7 @@ export class TreeRenderer {
     const links = root.links();
     const edge = this.g
       .selectAll("line.edge")
-      .data(links, (d) => `${d.source.data.data.position}->${d.target.data.data.position}`);
+      .data(links, (d) => `${d.source.data.data.id}->${d.target.data.data.id}`);
     edge.exit().remove();
     edge
       .enter()
@@ -90,7 +90,7 @@ export class TreeRenderer {
     const nodes = root.descendants();
     const node = this.g
       .selectAll("circle.node")
-      .data(nodes, (d) => `${d.data.data.position[0]},${d.data.data.position[1]}-${d.depth}`);
+      .data(nodes, (d) => d.data.data.id);
     node.exit().remove();
     const nodeEnter = node
       .enter()

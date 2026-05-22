@@ -1,6 +1,28 @@
 // Canvas-based maze renderer. Stateless: pass it the maze and a render state,
 // and it draws the current frame.
 
+// Theme color tables. Indexed by data-theme on <html>.
+const THEMES = {
+  dark: {
+    wall: "#3a3a3a",
+    cellCold: [31, 31, 31],
+    cellHot: [58, 130, 246],
+    gridLine: "#0a0a0a",
+  },
+  light: {
+    wall: "#888888",
+    cellCold: [240, 240, 240],
+    cellHot: [58, 130, 246],
+    gridLine: "#cccccc",
+  },
+};
+
+function currentTheme() {
+  if (typeof document === "undefined") return THEMES.dark;
+  const t = document.documentElement.dataset.theme;
+  return THEMES[t] || THEMES.dark;
+}
+
 export class MazeRenderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -21,6 +43,8 @@ export class MazeRenderer {
     const offX = (canvas.width - cell * maze.size) / 2;
     const offY = (canvas.height - cell * maze.size) / 2;
 
+    const theme = currentTheme();
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Heatmap normalization
@@ -35,20 +59,19 @@ export class MazeRenderer {
         const y = offY + r * cell;
         const isWall = maze.grid[r][c] === 1;
         if (isWall) {
-          ctx.fillStyle = "#3a3a3a";
+          ctx.fillStyle = theme.wall;
         } else {
           const v = visits.get(`${r},${c}`) || 0;
           const t = maxVisits ? v / maxVisits : 0;
-          // Blend from #1f1f1f (cold) to #3a82f6 (hot blue)
-          const r0 = 31, g0 = 31, b0 = 31;
-          const r1 = 58, g1 = 130, b1 = 246;
+          const [r0, g0, b0] = theme.cellCold;
+          const [r1, g1, b1] = theme.cellHot;
           const rr = Math.round(r0 + (r1 - r0) * t);
           const gg = Math.round(g0 + (g1 - g0) * t);
           const bb = Math.round(b0 + (b1 - b0) * t);
           ctx.fillStyle = `rgb(${rr},${gg},${bb})`;
         }
         ctx.fillRect(x, y, cell, cell);
-        ctx.strokeStyle = "#0a0a0a";
+        ctx.strokeStyle = theme.gridLine;
         ctx.lineWidth = 1;
         ctx.strokeRect(x + 0.5, y + 0.5, cell - 1, cell - 1);
       }
