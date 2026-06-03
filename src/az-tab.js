@@ -34,7 +34,7 @@ export function initAzTab() {
   const resetNetBtn = document.getElementById("az-btn-reset-net");
   const canvas = document.getElementById("az-maze-canvas");
   const mazeRenderer = new MazeRenderer(canvas);
-  const treeRenderer = new TreeRenderer(document.getElementById("az-tree-svg"));
+  let treeRenderer = new TreeRenderer(document.getElementById("az-tree-svg"));
 
   zInput.value = Z_PRESETS["Pure win/loss"];
 
@@ -53,6 +53,7 @@ export function initAzTab() {
   state.zChart = zChart;
   state.lossChart = lossChart;
   state.probe = probe;
+  state.treeRenderer = treeRenderer;
   state.zFn = compileReward(zInput.value);
   renderMaze(mazeRenderer);
   renderCharts();
@@ -98,6 +99,8 @@ export function initAzTab() {
     state.zChart = zChart;
     state.lossChart = lossChart;
     state.probe = probe;
+    treeRenderer = new TreeRenderer(document.getElementById("az-tree-svg"));
+    state.treeRenderer = treeRenderer;
     zChart.clear();
     lossChart.clear();
     state.zFn = compileReward(zInput.value);
@@ -110,7 +113,8 @@ export function initAzTab() {
   run10Btn.addEventListener("click", () => runMany(10, mazeRenderer));
   runContBtn.addEventListener("click", () => toggleContinuous(runContBtn, mazeRenderer));
   resetMctsBtn.addEventListener("click", () => {
-    document.getElementById("az-tree-svg").innerHTML = "";
+    treeRenderer = new TreeRenderer(document.getElementById("az-tree-svg"));
+    state.treeRenderer = treeRenderer;
   });
   resetNetBtn.addEventListener("click", () => {
     if (!confirm("Reset network: erase all weights, replay buffer, and charts?")) return;
@@ -119,6 +123,8 @@ export function initAzTab() {
     state.zChart = zChart;
     state.lossChart = lossChart;
     state.probe = probe;
+    treeRenderer = new TreeRenderer(document.getElementById("az-tree-svg"));
+    state.treeRenderer = treeRenderer;
     zChart.clear();
     lossChart.clear();
     state.zFn = compileReward(zInput.value);
@@ -191,7 +197,7 @@ async function runSelfPlayStep(mazeRenderer) {
   renderCharts();
   updateProbe();
   renderMaze(mazeRenderer);
-  if (result.lastMcts) treeRenderer.render(result.lastMcts);
+  if (result.lastMcts) state.treeRenderer.render(result.lastMcts);
 }
 
 async function runMany(N, mazeRenderer) {
