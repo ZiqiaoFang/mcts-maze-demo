@@ -127,3 +127,27 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 #ctl-reward-formula.invalid { border-color: #ef4444; }
 .formula-group { gap: 0.5rem; }
+
+#tab-bar {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border, #444);
+}
+.tab-btn {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid var(--border, #444);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.tab-btn.active {
+  background: var(--bg-elev, #2a2a2a);
+  font-weight: 600;
+}
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }

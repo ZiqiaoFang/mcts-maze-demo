@@ -9,6 +9,12 @@
   <script type="module" src="src/app.js" defer></script>
 </head>
 <body>
+  <div id="tab-bar">
+    <button class="tab-btn active" data-tab="classic">Classic MCTS</button>
+    <button class="tab-btn" data-tab="az">AlphaZero MCTS</button>
+  </div>
+
+  <div id="tab-classic" class="tab-pane active">
   <header>
     <h1>MCTS Maze Demo</h1>
     <div id="status-bar">
@@ -72,5 +78,9 @@
   <button id="debug-bench">Run 1000 iterations (benchmark)</button>
   <pre id="debug-bench-out"></pre>
 </aside>
+  </div>
+  <div id="tab-az" class="tab-pane">
+    <p style="padding: 2rem; text-align: center;">AlphaZero tab content — wired in later tasks.</p>
+  </div>
 </body>
 </html>
