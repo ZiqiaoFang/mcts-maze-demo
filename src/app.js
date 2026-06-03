@@ -150,6 +150,7 @@ sizeSel.addEventListener("change", () => {
   newMcts();
 });
 function applyFormula(formulaString) {
+  if (busy) return;
   try {
     const fn = compileReward(formulaString);
     formulaInput.classList.remove("invalid");
