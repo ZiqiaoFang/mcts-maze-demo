@@ -37,10 +37,15 @@
           <option value="20">20×20</option>
         </select>
       </label>
-      <label>Reward:
-        <select id="ctl-reward">
-          <option value="shaped" selected>Distance-shaped</option>
-          <option value="winloss">Pure win/loss</option>
+      <label class="formula-group">Reward:
+        <input type="text" id="ctl-reward-formula"
+               value="(isGoal ? 1 : 0) + Math.max(0, 1 - dist / maxDist)"
+               spellcheck="false" autocomplete="off" />
+        <select id="ctl-reward-preset" title="Load a preset">
+          <option value="" disabled selected>Presets ▾</option>
+          <option value="Distance-shaped">Distance-shaped</option>
+          <option value="Pure win/loss">Pure win/loss</option>
+          <option value="Step penalty">Step penalty</option>
         </select>
       </label>
     </div>
