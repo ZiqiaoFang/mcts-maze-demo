@@ -194,6 +194,7 @@ async function runSelfPlayStep(mazeRenderer) {
     state.lossChart.addPoint("policy", state.lastLosses.policy);
     state.lossChart.addPoint("value", state.lastLosses.value);
   }
+  state.lastMcts = result.lastMcts ?? null;
   renderCharts();
   updateProbe();
   renderMaze(mazeRenderer);
@@ -273,5 +274,6 @@ function renderMaze(mazeRenderer) {
   const opts = {};
   if (mode === "v") opts.vHeatmap = computeVHeatmap();
   else if (mode === "p") opts.pArrows = computePArrows();
+  else if (mode === "visits") opts.visits = state.lastMcts ? state.lastMcts.cellVisits() : new Map();
   mazeRenderer.render(maze, opts);
 }
