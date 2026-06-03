@@ -3,6 +3,7 @@ import { MAZES } from "./maze.js";
 import { MCTS } from "./mcts.js";
 import { MazeRenderer } from "./render-maze.js";
 import { TreeRenderer } from "./render-tree.js";
+import { compileReward, PRESETS } from "./reward.js";
 
 const DEBUG = new URLSearchParams(location.search).get("debug") === "1";
 if (DEBUG) document.getElementById("debug-panel").hidden = false;
@@ -10,7 +11,10 @@ if (DEBUG) document.getElementById("debug-panel").hidden = false;
 const canvas = document.getElementById("maze-canvas");
 const svg = document.getElementById("tree-svg");
 const sizeSel = document.getElementById("ctl-size");
-const rewardSel = document.getElementById("ctl-reward");
+const formulaInput = document.getElementById("ctl-reward-formula");
+const presetSel = document.getElementById("ctl-reward-preset");
+formulaInput.value = PRESETS["Distance-shaped"];
+let currentRewardFn = null;
 const cSlider = document.getElementById("ctl-c");
 const hSlider = document.getElementById("ctl-horizon");
 const cVal = document.getElementById("ctl-c-val");
@@ -34,7 +38,7 @@ function newMcts() {
   mcts = new MCTS(maze, {
     C: parseFloat(cSlider.value),
     rolloutHorizon: parseInt(hSlider.value, 10),
-    rewardMode: rewardSel.value,
+    rewardFn: currentRewardFn,
     seed: 42,
   });
   renderAll();
@@ -145,7 +149,32 @@ sizeSel.addEventListener("change", () => {
   hVal.textContent = hSlider.value;
   newMcts();
 });
-rewardSel.addEventListener("change", newMcts);
+function applyFormula(formulaString) {
+  if (busy) return;
+  try {
+    const fn = compileReward(formulaString);
+    formulaInput.classList.remove("invalid");
+    formulaInput.title = "";
+    if (statPhase.textContent.startsWith("reward error")) {
+      statPhase.textContent = "idle";
+    }
+    currentRewardFn = fn;
+    newMcts();
+  } catch (err) {
+    formulaInput.classList.add("invalid");
+    formulaInput.title = err.message;
+    statPhase.textContent = `reward error: ${err.message}`;
+  }
+}
+
+formulaInput.addEventListener("change", () => applyFormula(formulaInput.value));
+presetSel.addEventListener("change", () => {
+  const key = presetSel.value;
+  if (!key) return;
+  formulaInput.value = PRESETS[key];
+  presetSel.value = "";
+  applyFormula(formulaInput.value);
+});
 cSlider.addEventListener("input", () => {
   cVal.textContent = parseFloat(cSlider.value).toFixed(2);
   if (mcts) mcts.setConfig({ C: parseFloat(cSlider.value) });
@@ -155,7 +184,7 @@ hSlider.addEventListener("input", () => {
   if (mcts) mcts.setConfig({ rolloutHorizon: parseInt(hSlider.value, 10) });
 });
 
-newMcts();
+applyFormula(formulaInput.value);
 
 document.getElementById("theme-toggle").addEventListener("click", () => {
   const html = document.documentElement;

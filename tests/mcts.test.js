@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Maze, MAZE_10 } from "../src/maze.js";
 import { MCTS } from "../src/mcts.js";
+import { compileReward, PRESETS } from "../src/reward.js";
 
 const SIMPLE = new Maze(
   [
@@ -36,7 +37,11 @@ test("MCTS: after one iteration, root has visits=1 and one child", () => {
 });
 
 test("MCTS: after many iterations, finds path to goal (PV reaches goal)", () => {
-  const m = new MCTS(MAZE_10, { seed: 42, rolloutHorizon: 40, rewardMode: "shaped" });
+  const m = new MCTS(MAZE_10, {
+    seed: 42,
+    rolloutHorizon: 40,
+    rewardFn: compileReward(PRESETS["Distance-shaped"]),
+  });
   for (let i = 0; i < 500; i++) for (const _ev of m.iterate()) { /* drain */ }
   const pv = m.principalVariation();
   // The PV should reach the goal or get very close — assert it reached the goal cell.
@@ -45,6 +50,18 @@ test("MCTS: after many iterations, finds path to goal (PV reaches goal)", () => 
     MAZE_10.isGoal(last.position) || MAZE_10.manhattan(last.position, MAZE_10.goal) <= 3,
     `PV final position ${last.position} too far from goal ${MAZE_10.goal}`
   );
+});
+
+test("MCTS: configurable rewardFn — runs without error and grows tree", () => {
+  // Smoke test for the new rewardFn API on MAZE_10.
+  const m = new MCTS(MAZE_10, {
+    seed: 7,
+    rolloutHorizon: 40,
+    rewardFn: compileReward(PRESETS["Distance-shaped"]),
+  });
+  for (let i = 0; i < 50; i++) for (const _ev of m.iterate()) { /* drain */ }
+  const s = m.treeStats();
+  assert.ok(s.totalNodes > 1, `expected tree to grow, got ${s.totalNodes} nodes`);
 });
 
 test("MCTS.treeStats reports node count, max depth, max visits", () => {

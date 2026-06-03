@@ -1,6 +1,8 @@
 import { Node } from "./node.js";
 import { mulberry32, pick } from "./rng.js";
-import { computeReward } from "./reward.js";
+import { compileReward, computeReward, PRESETS } from "./reward.js";
+
+const DEFAULT_REWARD_FN = compileReward(PRESETS["Distance-shaped"]);
 
 const actionKey = ([dr, dc]) => `${dr},${dc}`;
 
@@ -21,7 +23,7 @@ export class MCTS {
     this.config = {
       C: config.C ?? 1.41,
       rolloutHorizon: config.rolloutHorizon ?? maze.size * 4,
-      rewardMode: config.rewardMode ?? "shaped",
+      rewardFn: config.rewardFn ?? DEFAULT_REWARD_FN,
       seed: config.seed ?? 42,
     };
     this.rng = mulberry32(this.config.seed);
@@ -96,6 +98,7 @@ export class MCTS {
   _simulate(startPos) {
     const positions = [[...startPos]];
     let pos = startPos;
+    let steps = 0;
     for (let step = 0; step < this.config.rolloutHorizon; step++) {
       if (this.maze.isGoal(pos)) break;
       const actions = this.maze.legalActions(pos);
@@ -103,8 +106,16 @@ export class MCTS {
       const action = pick(actions, this.rng);
       pos = this.maze.step(pos, action);
       positions.push([...pos]);
+      steps++;
     }
-    const reward = computeReward(this.maze, pos, this.config.rewardMode);
+    const ctx = {
+      isGoal: this.maze.isGoal(pos),
+      dist: this.maze.manhattan(pos, this.maze.goal),
+      maxDist: this.maze.maxDistance(),
+      steps,
+      startDist: this.maze.manhattan(startPos, this.maze.goal),
+    };
+    const reward = computeReward(this.config.rewardFn, ctx);
     return { positions, reward };
   }
 

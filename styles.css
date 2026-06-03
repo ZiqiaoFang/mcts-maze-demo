@@ -114,3 +114,16 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 #debug-panel h3 { margin: 0 0 8px; font-size: 13px; }
 #debug-panel pre { margin: 0 0 8px; white-space: pre-wrap; }
+
+#ctl-reward-formula {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  width: 360px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+#ctl-reward-formula.invalid { border-color: #ef4444; }
+.formula-group { gap: 0.5rem; }
