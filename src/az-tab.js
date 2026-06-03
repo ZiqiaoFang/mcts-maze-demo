@@ -107,7 +107,9 @@ export function initAzTab() {
   stepBtn.addEventListener("click", () => runSelfPlayStep(mazeRenderer));
   run10Btn.addEventListener("click", () => runMany(10, mazeRenderer));
   runContBtn.addEventListener("click", () => toggleContinuous(runContBtn, mazeRenderer));
-  resetMctsBtn.addEventListener("click", () => { /* no-op for now; tree pane added later */ });
+  resetMctsBtn.addEventListener("click", () => {
+    document.getElementById("az-tree-svg").innerHTML = "";
+  });
   resetNetBtn.addEventListener("click", () => {
     if (!confirm("Reset network: erase all weights, replay buffer, and charts?")) return;
     const lr2 = Math.pow(10, parseFloat(lrSlider.value));
