@@ -27,9 +27,9 @@ export function predict(model, maze, agentPos) {
   return tf.tidy(() => {
     const x = tf.tensor2d(enc, [1, enc.length]);
     const [pTensor, vTensor] = model.predict(x);
-    const p = pTensor.dataSync().slice(); // copy out of WebGL
+    const p = pTensor.dataSync().slice(); // copy out of WebGL (already a Float32Array)
     const v = vTensor.dataSync()[0];
-    return { p: Float32Array.from(p), v };
+    return { p, v };
   });
 }
 
@@ -67,7 +67,7 @@ export function trainStep(model, optimizer, batch, inputDim) {
     // value loss: MSE
     const vLoss = tf.losses.meanSquaredError(zTarget, vPred);
     // policy loss: -sum(pi * log(p)) averaged over batch
-    const eps = tf.scalar(1e-8);
+    const eps = tf.scalar(1e-7);
     const pLoss = tf
       .neg(tf.sum(tf.mul(piTarget, tf.log(tf.add(pPred, eps)))))
       .div(tf.scalar(B));
