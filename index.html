@@ -80,7 +80,77 @@
 </aside>
   </div>
   <div id="tab-az" class="tab-pane">
-    <p style="padding: 2rem; text-align: center;">AlphaZero tab content — wired in later tasks.</p>
+    <header class="az-header">
+      <div id="az-status-bar">
+        <span>Games: <span id="az-games">0</span></span>
+        <span>Latest z: <span id="az-latest-z">—</span></span>
+        <span>z̄(20): <span id="az-avg-z">—</span></span>
+        <span>Loss: <span id="az-loss">—</span></span>
+        <span>Buffer: <span id="az-buf">0</span></span>
+      </div>
+    </header>
+
+    <div id="az-overlay-toggle">
+      Overlay:
+      <label><input type="radio" name="az-overlay" value="v" checked /> v(s) heatmap</label>
+      <label><input type="radio" name="az-overlay" value="p" /> p(a|s) arrows</label>
+      <label><input type="radio" name="az-overlay" value="visits" /> MCTS visits</label>
+      <label><input type="radio" name="az-overlay" value="off" /> off</label>
+    </div>
+
+    <main class="az-main">
+      <section class="az-maze-pane">
+        <canvas id="az-maze-canvas" width="600" height="600"></canvas>
+      </section>
+      <section class="az-tree-pane">
+        <svg id="az-tree-svg" width="600" height="600"></svg>
+      </section>
+    </main>
+
+    <section class="az-charts">
+      <canvas id="az-chart-z" width="380" height="180"></canvas>
+      <canvas id="az-chart-loss" width="380" height="180"></canvas>
+      <div id="az-probe" class="az-probe"></div>
+    </section>
+
+    <footer class="az-controls">
+      <div class="control-row">
+        <label>Maze size:
+          <select id="az-ctl-size">
+            <option value="10" selected>10×10</option>
+            <option value="15">15×15</option>
+            <option value="20">20×20</option>
+          </select>
+        </label>
+        <label class="formula-group">z formula:
+          <input type="text" id="az-ctl-z-formula" spellcheck="false" autocomplete="off" />
+          <select id="az-ctl-z-preset" title="Load a preset">
+            <option value="" disabled selected>Presets ▾</option>
+            <option value="Pure win/loss">Pure win/loss</option>
+            <option value="Distance-shaped">Distance-shaped</option>
+            <option value="Step penalty">Step penalty</option>
+          </select>
+        </label>
+      </div>
+      <div class="control-row">
+        <label>c_puct: <input type="range" id="az-ctl-cpuct" min="0.1" max="4" step="0.05" value="1.0" />
+          <span id="az-ctl-cpuct-val">1.00</span>
+        </label>
+        <label>MCTS sims/move: <input type="range" id="az-ctl-sims" min="10" max="400" step="10" value="50" />
+          <span id="az-ctl-sims-val">50</span>
+        </label>
+        <label>Learning rate (log10): <input type="range" id="az-ctl-lr" min="-5" max="-2" step="0.1" value="-3" />
+          <span id="az-ctl-lr-val">1e-3</span>
+        </label>
+      </div>
+      <div class="control-row">
+        <button id="az-btn-step">Self-play step</button>
+        <button id="az-btn-run10">Run 10</button>
+        <button id="az-btn-runcont">Run continuously</button>
+        <button id="az-btn-reset-mcts">Reset MCTS</button>
+        <button id="az-btn-reset-net">Reset network</button>
+      </div>
+    </footer>
   </div>
 </body>
 </html>

@@ -151,3 +151,67 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
+
+.az-header {
+  padding: 0.5rem 1rem;
+}
+#az-status-bar {
+  display: flex;
+  gap: 1.25rem;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+#az-overlay-toggle {
+  padding: 0 1rem 0.5rem;
+  font-size: 0.85rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+#az-overlay-toggle label {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+.az-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0 1rem;
+}
+.az-maze-pane, .az-tree-pane {
+  background: var(--bg-elev, #222);
+  border: 1px solid var(--border, #444);
+  border-radius: 6px;
+}
+.az-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+}
+.az-charts canvas,
+.az-probe {
+  background: var(--bg-elev, #222);
+  border: 1px solid var(--border, #444);
+  border-radius: 6px;
+  padding: 0.5rem;
+}
+.az-probe { font-family: monospace; font-size: 0.85rem; }
+.probe-title { color: #888; margin-bottom: 0.5rem; }
+.probe-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+.probe-label { width: 3.5em; }
+.probe-bar { flex: 1; background: #333; height: 0.75em; border-radius: 3px; overflow: hidden; }
+.probe-fill { height: 100%; background: #6ab0ff; width: 0; transition: width 120ms; }
+.probe-pct { width: 2.75em; text-align: right; color: #ccc; }
+.probe-v { margin-top: 0.5rem; color: #ccc; }
+.az-controls {
+  padding: 0.5rem 1rem 1rem;
+}
+.az-controls .control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
