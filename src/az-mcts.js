@@ -15,6 +15,12 @@ export class AZNode {
   meanReward() {
     return this.visits === 0 ? 0 : this.totalReward / this.visits;
   }
+  // Compatibility shim for TreeRenderer's tooltip. Returns PUCT score, not
+  // UCB1; treat `C` as the c_puct coefficient.
+  ucb1(C, parentVisits) {
+    if (parentVisits == null || parentVisits === 0) return Infinity;
+    return puctScore(this, parentVisits, C);
+  }
 }
 
 // PUCT score with the conventional formulation:
@@ -40,12 +46,12 @@ function ancestorPositionKeys(node) {
 export class AZMCTS {
   constructor(maze, network, config = {}) {
     this.maze = maze;
-    this.network = network;        // must expose predict(maze, pos) → {p, v}
+    this.network = network;
     this.cPuct = config.cPuct ?? 1.0;
-    // The MCTS root represents the agent's *current* position. Default to
-    // maze.start; callers running self-play pass a startPos for the current
-    // game move. Root has no prior (it isn't selected via PUCT); 1 is a
-    // placeholder.
+    // TreeRenderer reads mcts.config.C; expose it as an alias of cPuct so the
+    // same renderer works for both Classic and AZ trees. The tooltip label
+    // still reads "UCB1" but the value shown is PUCT score for AZ nodes.
+    this.config = { C: this.cPuct };
     const startPos = config.startPos ?? maze.start;
     this.root = new AZNode([...startPos], null, null, 1);
     this.iterationCount = 0;
@@ -130,5 +136,44 @@ export class AZMCTS {
     }
     // Normalize in float64 to avoid Float32 rounding accumulation.
     return pi.map(v => v / total);
+  }
+
+  principalVariation() {
+    const path = [this.root];
+    let node = this.root;
+    while (node.children.size > 0) {
+      let best = null;
+      let bestVisits = -1;
+      for (const child of node.children.values()) {
+        if (child.visits > bestVisits) { best = child; bestVisits = child.visits; }
+      }
+      if (!best) break;
+      path.push(best);
+      node = best;
+    }
+    return path;
+  }
+
+  treeStats() {
+    let totalNodes = 0, maxDepth = 0, maxVisits = 0;
+    const walk = (n, d) => {
+      totalNodes++;
+      if (d > maxDepth) maxDepth = d;
+      if (n.visits > maxVisits) maxVisits = n.visits;
+      for (const c of n.children.values()) walk(c, d + 1);
+    };
+    walk(this.root, 0);
+    return { totalNodes, maxDepth, maxVisits };
+  }
+
+  cellVisits() {
+    const map = new Map();
+    const walk = (n) => {
+      const key = `${n.position[0]},${n.position[1]}`;
+      map.set(key, (map.get(key) || 0) + n.visits);
+      for (const c of n.children.values()) walk(c);
+    };
+    walk(this.root);
+    return map;
   }
 }

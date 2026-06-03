@@ -7,6 +7,7 @@ import { AZMCTS } from "./az-mcts.js";
 import { ReplayBuffer, playOneGame } from "./az-selfplay.js";
 import { CHANNELS } from "./az-encode.js";
 import { LineChart, ProbePanel } from "./az-charts.js";
+import { TreeRenderer } from "./render-tree.js";
 
 const Z_PRESETS = {
   "Pure win/loss": "isGoal ? 1 : -1",
@@ -33,6 +34,7 @@ export function initAzTab() {
   const resetNetBtn = document.getElementById("az-btn-reset-net");
   const canvas = document.getElementById("az-maze-canvas");
   const mazeRenderer = new MazeRenderer(canvas);
+  const treeRenderer = new TreeRenderer(document.getElementById("az-tree-svg"));
 
   zInput.value = Z_PRESETS["Pure win/loss"];
 
@@ -189,6 +191,7 @@ async function runSelfPlayStep(mazeRenderer) {
   renderCharts();
   updateProbe();
   renderMaze(mazeRenderer);
+  if (result.lastMcts) treeRenderer.render(result.lastMcts);
 }
 
 async function runMany(N, mazeRenderer) {

@@ -72,10 +72,12 @@ export function playOneGame(opts) {
   const trajectory = [];
   let t = 0;
   let reachedGoal = false;
+  let lastMcts = null;
   for (; t < maxSteps; t++) {
     if (maze.isGoal(pos)) { reachedGoal = true; break; }
     const mcts = new AZMCTS(maze, network, { cPuct, startPos: pos });
     for (let s = 0; s < simsPerMove; s++) mcts.iterate();
+    lastMcts = mcts;
     const pi = mcts.rootPolicy();
     trajectory.push({ state: encodeState(maze, pos), pi });
     const aIdx = sampleAction(pi, t < temperatureMoves ? 1 : 0, rng);
@@ -90,5 +92,5 @@ export function playOneGame(opts) {
     startDist: maze.manhattan(maze.start, maze.goal),
   };
   const z = zFn(ctx);
-  return { trajectory, z, steps: trajectory.length, reachedGoal };
+  return { trajectory, z, steps: trajectory.length, reachedGoal, lastMcts };
 }
