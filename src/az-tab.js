@@ -52,7 +52,7 @@ export function initAzTab() {
   state.lossChart = lossChart;
   state.probe = probe;
   state.zFn = compileReward(zInput.value);
-  mazeRenderer.render(currentMaze(), {});
+  renderMaze(mazeRenderer);
   renderCharts();
 
   // Slider labels
@@ -99,7 +99,7 @@ export function initAzTab() {
     zChart.clear();
     lossChart.clear();
     state.zFn = compileReward(zInput.value);
-    mazeRenderer.render(currentMaze(), {});
+    renderMaze(mazeRenderer);
     updateStatusBar();
     renderCharts();
   });
@@ -118,9 +118,17 @@ export function initAzTab() {
     zChart.clear();
     lossChart.clear();
     state.zFn = compileReward(zInput.value);
-    mazeRenderer.render(currentMaze(), {});
+    renderMaze(mazeRenderer);
     updateStatusBar();
     renderCharts();
+  });
+
+  for (const r of document.querySelectorAll('input[name="az-overlay"]')) {
+    r.addEventListener("change", () => renderMaze(mazeRenderer));
+  }
+  // classic-tab owns the theme toggle and flips data-theme; we just re-render.
+  document.getElementById("theme-toggle").addEventListener("click", () => {
+    renderMaze(mazeRenderer);
   });
 
   updateStatusBar();
@@ -178,6 +186,7 @@ async function runSelfPlayStep(mazeRenderer) {
   }
   renderCharts();
   updateProbe();
+  renderMaze(mazeRenderer);
 }
 
 async function runMany(N, mazeRenderer) {
@@ -223,4 +232,23 @@ function updateProbe() {
   const maze = currentMaze();
   const { p, v } = predict(state.model, maze, maze.start);
   state.probe.update({ p, v });
+}
+
+function computeVHeatmap() {
+  const maze = currentMaze();
+  const size = maze.size;
+  const positions = [];
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) positions.push([r, c]);
+  }
+  const { vs } = predictBatch(state.model, maze, positions);
+  return vs;
+}
+
+function renderMaze(mazeRenderer) {
+  const maze = currentMaze();
+  const mode = document.querySelector('input[name="az-overlay"]:checked').value;
+  const opts = {};
+  if (mode === "v") opts.vHeatmap = computeVHeatmap();
+  mazeRenderer.render(maze, opts);
 }

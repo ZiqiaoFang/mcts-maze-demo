@@ -77,6 +77,22 @@ export class MazeRenderer {
       }
     }
 
+    // v(s) heatmap (AZ tab). state.vHeatmap is Float32Array(size*size) row-major.
+    if (state.vHeatmap) {
+      for (let r = 0; r < maze.size; r++) {
+        for (let c = 0; c < maze.size; c++) {
+          if (maze.grid[r][c] === 1) continue;
+          const v = state.vHeatmap[r * maze.size + c];
+          const tt = Math.max(-1, Math.min(1, v));
+          const red = tt < 0 ? 255 : Math.round(255 * (1 - tt));
+          const blue = tt > 0 ? 255 : Math.round(255 * (1 + tt));
+          const green = Math.round(120 * (1 - Math.abs(tt)));
+          ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, 0.45)`;
+          ctx.fillRect(offX + c * cell, offY + r * cell, cell, cell);
+        }
+      }
+    }
+
     // Selection path outlines
     if (state.selectionPath?.length) {
       ctx.strokeStyle = "#fbbf24";
