@@ -2,8 +2,14 @@ import { ACTIONS } from "./maze.js";
 
 const actionKey = ([dr, dc]) => `${dr},${dc}`;
 
+// Monotonic id so TreeRenderer's d3 key function can distinguish nodes.
+// Without this every node's id is undefined → d3 dedups them and the tree
+// pane renders only the root group with no children.
+let _azNodeIdCounter = 0;
+
 export class AZNode {
   constructor(position, parent, action, prior) {
+    this.id = _azNodeIdCounter++;
     this.position = position;
     this.parent = parent;
     this.action = action;          // [dr, dc] taken from parent
