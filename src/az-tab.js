@@ -1,10 +1,12 @@
 import { MAZES, regenerateMaze } from "./maze.js";
+import { ACTIONS } from "./maze.js";
 import { MazeRenderer } from "./render-maze.js";
 import { compileReward } from "./reward.js";
 import { createModel, predict, predictBatch, trainStep } from "./az-network.js";
 import { AZMCTS } from "./az-mcts.js";
 import { ReplayBuffer, playOneGame } from "./az-selfplay.js";
 import { CHANNELS } from "./az-encode.js";
+import { LineChart, ProbePanel } from "./az-charts.js";
 
 const Z_PRESETS = {
   "Pure win/loss": "isGoal ? 1 : -1",
@@ -34,9 +36,24 @@ export function initAzTab() {
 
   zInput.value = Z_PRESETS["Pure win/loss"];
 
+  const zChart = new LineChart(document.getElementById("az-chart-z"),
+    { title: "z per game (raw + moving avg)", yMin: -1.1, yMax: 1.1 });
+  zChart.addSeries("raw", "#888");
+  zChart.addSeries("ma", "#6ab0ff");
+  const lossChart = new LineChart(document.getElementById("az-chart-loss"),
+    { title: "training loss" });
+  lossChart.addSeries("total", "#6ab0ff");
+  lossChart.addSeries("policy", "#ffb86b");
+  lossChart.addSeries("value", "#f06b6b");
+  const probe = new ProbePanel(document.getElementById("az-probe"));
+
   state = freshState(parseInt(sizeSel.value, 10), parseFloat(lrSlider.value));
+  state.zChart = zChart;
+  state.lossChart = lossChart;
+  state.probe = probe;
   state.zFn = compileReward(zInput.value);
   mazeRenderer.render(currentMaze(), {});
+  renderCharts();
 
   // Slider labels
   cPuctSlider.addEventListener("input", () => {
@@ -76,9 +93,15 @@ export function initAzTab() {
       return;
     }
     state = freshState(size, Math.pow(10, parseFloat(lrSlider.value)));
+    state.zChart = zChart;
+    state.lossChart = lossChart;
+    state.probe = probe;
+    zChart.clear();
+    lossChart.clear();
     state.zFn = compileReward(zInput.value);
     mazeRenderer.render(currentMaze(), {});
     updateStatusBar();
+    renderCharts();
   });
 
   stepBtn.addEventListener("click", () => runSelfPlayStep(mazeRenderer));
@@ -87,11 +110,17 @@ export function initAzTab() {
   resetMctsBtn.addEventListener("click", () => { /* no-op for now; tree pane added later */ });
   resetNetBtn.addEventListener("click", () => {
     if (!confirm("Reset network: erase all weights, replay buffer, and charts?")) return;
-    const lr = Math.pow(10, parseFloat(lrSlider.value));
-    state = freshState(state.size, lr);
+    const lr2 = Math.pow(10, parseFloat(lrSlider.value));
+    state = freshState(state.size, lr2);
+    state.zChart = zChart;
+    state.lossChart = lossChart;
+    state.probe = probe;
+    zChart.clear();
+    lossChart.clear();
     state.zFn = compileReward(zInput.value);
     mazeRenderer.render(currentMaze(), {});
     updateStatusBar();
+    renderCharts();
   });
 
   updateStatusBar();
@@ -139,6 +168,16 @@ async function runSelfPlayStep(mazeRenderer) {
   state.zHistory.push(result.z);
   if (state.zHistory.length > 1000) state.zHistory.shift();
   updateStatusBar();
+  state.zChart.addPoint("raw", result.z);
+  const w = state.zHistory.slice(-20);
+  state.zChart.addPoint("ma", w.reduce((a, b) => a + b, 0) / w.length);
+  if (state.lastLosses) {
+    state.lossChart.addPoint("total", state.lastLosses.total);
+    state.lossChart.addPoint("policy", state.lastLosses.policy);
+    state.lossChart.addPoint("value", state.lastLosses.value);
+  }
+  renderCharts();
+  updateProbe();
 }
 
 async function runMany(N, mazeRenderer) {
@@ -173,4 +212,15 @@ function updateStatusBar() {
   document.getElementById("az-loss").textContent =
     state.lastLosses ? state.lastLosses.total.toFixed(4) : "—";
   document.getElementById("az-buf").textContent = state.buffer.size();
+}
+
+function renderCharts() {
+  state.zChart.render();
+  state.lossChart.render();
+}
+
+function updateProbe() {
+  const maze = currentMaze();
+  const { p, v } = predict(state.model, maze, maze.start);
+  state.probe.update({ p, v });
 }
