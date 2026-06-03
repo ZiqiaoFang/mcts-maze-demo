@@ -93,6 +93,30 @@ export class MazeRenderer {
       }
     }
 
+    // p(a|s) arrows (AZ tab). state.pArrows is Float32Array(size*size*4) in
+    // row-major × ACTIONS order (up, down, left, right).
+    if (state.pArrows) {
+      ctx.strokeStyle = "#6ab0ff";
+      ctx.lineWidth = 1.5;
+      const ACTS = [[-1,0],[1,0],[0,-1],[0,1]];
+      for (let r = 0; r < maze.size; r++) {
+        for (let c = 0; c < maze.size; c++) {
+          if (maze.grid[r][c] === 1) continue;
+          const ccx = offX + c * cell + cell / 2;
+          const ccy = offY + r * cell + cell / 2;
+          for (let i = 0; i < 4; i++) {
+            const p = state.pArrows[(r * maze.size + c) * 4 + i];
+            const [dr, dc] = ACTS[i];
+            const len = (cell * 0.4) * p;
+            ctx.beginPath();
+            ctx.moveTo(ccx, ccy);
+            ctx.lineTo(ccx + dc * len, ccy + dr * len);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
     // Selection path outlines
     if (state.selectionPath?.length) {
       ctx.strokeStyle = "#fbbf24";

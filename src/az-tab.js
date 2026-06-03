@@ -245,10 +245,22 @@ function computeVHeatmap() {
   return vs;
 }
 
+function computePArrows() {
+  const maze = currentMaze();
+  const size = maze.size;
+  const positions = [];
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) positions.push([r, c]);
+  }
+  const { ps } = predictBatch(state.model, maze, positions);
+  return ps; // length size*size*4
+}
+
 function renderMaze(mazeRenderer) {
   const maze = currentMaze();
   const mode = document.querySelector('input[name="az-overlay"]:checked').value;
   const opts = {};
   if (mode === "v") opts.vHeatmap = computeVHeatmap();
+  else if (mode === "p") opts.pArrows = computePArrows();
   mazeRenderer.render(maze, opts);
 }
