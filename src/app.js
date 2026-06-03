@@ -1,5 +1,5 @@
 import { animateIteration } from "./animate.js";
-import { MAZES } from "./maze.js";
+import { MAZES, regenerateMaze } from "./maze.js";
 import { MCTS } from "./mcts.js";
 import { MazeRenderer } from "./render-maze.js";
 import { TreeRenderer } from "./render-tree.js";
@@ -77,7 +77,7 @@ function updateDebug() {
 
 let busy = false;
 const setButtonsEnabled = (enabled) => {
-  for (const id of ["btn-step", "btn-run10", "btn-runend", "btn-reset"]) {
+  for (const id of ["btn-step", "btn-run10", "btn-runend", "btn-reset", "btn-regenerate"]) {
     document.getElementById(id).disabled = !enabled;
   }
 };
@@ -139,6 +139,11 @@ document.getElementById("btn-runend").addEventListener("click", () => {
 });
 document.getElementById("btn-reset").addEventListener("click", () => {
   if (busy) return;
+  newMcts();
+});
+document.getElementById("btn-regenerate").addEventListener("click", () => {
+  if (busy) return;
+  regenerateMaze(parseInt(sizeSel.value, 10));
   newMcts();
 });
 
