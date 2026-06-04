@@ -40,8 +40,12 @@ export async function initAzTab() {
 
   zInput.value = Z_PRESETS["Pure win/loss"];
 
+  // Auto-scale the z axis: Pure win/loss lives in [-1, 1], Distance-shaped
+  // in [0, 1], Step penalty wider still. A fixed -1.1..+1.1 range made
+  // Distance-shaped lines look totally flat even when z was varying within
+  // a narrow band like 0.40 → 0.45.
   const zChart = new LineChart(document.getElementById("az-chart-z"),
-    { title: "z per game (raw + moving avg)", yMin: -1.1, yMax: 1.1 });
+    { title: "z per game (raw + moving avg) — y auto-scales" });
   zChart.addSeries("raw", "#888");
   zChart.addSeries("ma", "#6ab0ff");
   const lossChart = new LineChart(document.getElementById("az-chart-loss"),
