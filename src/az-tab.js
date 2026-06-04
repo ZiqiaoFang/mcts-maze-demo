@@ -251,7 +251,11 @@ function updateProgress({ move, maxSteps }) {
   } else if (state.loopActive && state.loopActive > 1) {
     prefix = `game ${state.loopDone + 1} / ${state.loopActive} · `;
   }
-  text.textContent = `${prefix}move ${move + 1} / ${maxSteps}`;
+  // The "/maxSteps" is the agent's step budget per game (= size × 4), NOT
+  // the MCTS sims/move slider. Surface simsPerMove here too so users can
+  // see the slider value is taking effect inside each move.
+  text.textContent =
+    `${prefix}agent step ${move + 1} / ${maxSteps} · ${state.simsPerMove} MCTS sims this move`;
 }
 
 function setIdleProgress() {
@@ -318,8 +322,15 @@ function renderMaze(mazeRenderer) {
   const maze = currentMaze();
   const mode = document.querySelector('input[name="az-overlay"]:checked').value;
   const opts = {};
-  if (mode === "v") opts.vHeatmap = computeVHeatmap();
-  else if (mode === "p") opts.pArrows = computePArrows();
-  else if (mode === "visits") opts.visits = state.lastMcts ? state.lastMcts.cellVisits() : new Map();
+  try {
+    if (mode === "v") opts.vHeatmap = computeVHeatmap();
+    else if (mode === "p") opts.pArrows = computePArrows();
+    else if (mode === "visits")
+      opts.visits = state.lastMcts ? state.lastMcts.cellVisits() : new Map();
+  } catch (err) {
+    // Surface silent overlay-compute failures (TF.js issues, NaN, etc.) so a
+    // user reporting "the overlay shows nothing" can paste an actual error.
+    console.error(`[az-tab] overlay '${mode}' failed:`, err);
+  }
   mazeRenderer.render(maze, opts);
 }
