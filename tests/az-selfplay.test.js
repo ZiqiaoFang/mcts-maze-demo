@@ -84,3 +84,17 @@ test("playOneGame calls onProgress for each move and yields to event loop", asyn
     assert.equal(progressCalls[i].maxSteps, 6);
   }
 });
+
+test("playOneGame returns cumulativeVisits with the start cell present", async () => {
+  const result = await playOneGame({
+    maze, network: STUB, zFn: Z_FN, simsPerMove: 10, cPuct: 1.0,
+    maxSteps: 6, temperatureMoves: 0, rng: Math.random,
+  });
+  assert.ok(result.cumulativeVisits instanceof Map);
+  // The first move's tree is rooted at the start; every per-move tree
+  // contributes its root's visits, so the start cell must be present
+  // with at least simsPerMove visits.
+  const startKey = `${maze.start[0]},${maze.start[1]}`;
+  assert.ok(result.cumulativeVisits.has(startKey));
+  assert.ok(result.cumulativeVisits.get(startKey) >= 10);
+});

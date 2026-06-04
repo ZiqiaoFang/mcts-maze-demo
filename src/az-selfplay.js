@@ -76,6 +76,11 @@ export async function playOneGame(opts) {
   let t = 0;
   let reachedGoal = false;
   let lastMcts = null;
+  // Visit counts across every per-move PUCT tree in this game, summed by cell.
+  // Lets the AZ tab's "MCTS visits" overlay light up the agent's actual path
+  // through the maze (start cell brightest, fading along the trajectory) —
+  // not just the very last move's tiny local tree.
+  const cumulativeVisits = new Map();
   for (; t < maxSteps; t++) {
     if (maze.isGoal(pos)) { reachedGoal = true; break; }
     if (onProgress) {
@@ -87,6 +92,10 @@ export async function playOneGame(opts) {
     const mcts = new AZMCTS(maze, network, { cPuct, startPos: pos });
     for (let s = 0; s < simsPerMove; s++) mcts.iterate();
     lastMcts = mcts;
+    // Fold this move's visits into the running per-cell totals.
+    for (const [key, v] of mcts.cellVisits()) {
+      cumulativeVisits.set(key, (cumulativeVisits.get(key) || 0) + v);
+    }
     const pi = mcts.rootPolicy();
     trajectory.push({ state: encodeState(maze, pos), pi });
     const aIdx = sampleAction(pi, t < temperatureMoves ? 1 : 0, rng);
@@ -101,5 +110,5 @@ export async function playOneGame(opts) {
     startDist: maze.manhattan(maze.start, maze.goal),
   };
   const z = zFn(ctx);
-  return { trajectory, z, steps: trajectory.length, reachedGoal, lastMcts };
+  return { trajectory, z, steps: trajectory.length, reachedGoal, lastMcts, cumulativeVisits };
 }

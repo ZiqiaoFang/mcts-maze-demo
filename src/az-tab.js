@@ -204,6 +204,7 @@ async function runSelfPlayStep(mazeRenderer) {
     state.lossChart.addPoint("value", state.lastLosses.value);
   }
   state.lastMcts = result.lastMcts ?? null;
+  state.cumulativeVisits = result.cumulativeVisits ?? new Map();
   renderCharts();
   updateProbe();
   renderMaze(mazeRenderer);
@@ -318,6 +319,41 @@ function computePArrows() {
   return ps; // length size*size*4
 }
 
+// "What the agent would do right now from the start cell" — greedy walk of
+// the network's policy. At each cell, pick the legal non-revisiting action
+// with the highest p(a|s). Stops at the goal, when stuck, or after maxSteps.
+// Returns an array of [r,c] positions; render-maze.js draws it as the green
+// principal-variation polyline.
+function computeBestRoute() {
+  const maze = currentMaze();
+  const maxSteps = maze.size * 4;
+  const visited = new Set();
+  const route = [[...maze.start]];
+  visited.add(maze.start.join(","));
+  let pos = [...maze.start];
+  for (let t = 0; t < maxSteps; t++) {
+    if (maze.isGoal(pos)) break;
+    const { p } = predict(state.model, maze, pos);
+    // Rank legal, non-revisiting actions by network prior; pick the best.
+    let bestIdx = -1;
+    let bestProb = -Infinity;
+    for (let i = 0; i < ACTIONS.length; i++) {
+      const next = maze.step(pos, ACTIONS[i]);
+      if (!maze.isOpen(next)) continue;
+      if (visited.has(next.join(","))) continue;
+      if (p[i] > bestProb) {
+        bestProb = p[i];
+        bestIdx = i;
+      }
+    }
+    if (bestIdx === -1) break; // dead-end under no-revisit
+    pos = maze.step(pos, ACTIONS[bestIdx]);
+    visited.add(pos.join(","));
+    route.push([...pos]);
+  }
+  return route;
+}
+
 function renderMaze(mazeRenderer) {
   const maze = currentMaze();
   const mode = document.querySelector('input[name="az-overlay"]:checked').value;
@@ -326,7 +362,14 @@ function renderMaze(mazeRenderer) {
     if (mode === "v") opts.vHeatmap = computeVHeatmap();
     else if (mode === "p") opts.pArrows = computePArrows();
     else if (mode === "visits")
-      opts.visits = state.lastMcts ? state.lastMcts.cellVisits() : new Map();
+      opts.visits = state.cumulativeVisits ?? new Map();
+    // Best route is always drawn (regardless of overlay mode), so users can
+    // see what the trained policy currently thinks the path looks like.
+    // Skip until the first self-play step so the route doesn't show a
+    // meaningless random walk from an untrained network.
+    if (state.gamesPlayed > 0) {
+      opts.principalVariation = computeBestRoute();
+    }
   } catch (err) {
     // Surface silent overlay-compute failures (TF.js issues, NaN, etc.) so a
     // user reporting "the overlay shows nothing" can paste an actual error.
