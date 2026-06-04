@@ -189,13 +189,43 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   grid-template-columns: 1fr 1fr 1fr;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
+  align-items: start;
 }
-.az-charts canvas,
+.az-chart-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.az-chart-cell canvas,
 .az-probe {
   background: var(--bg-elev, #222);
   border: 1px solid var(--border, #444);
   border-radius: 6px;
   padding: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+.az-chart-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.3rem 0.5rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: #bbb;
+  background: var(--bg-elev, #222);
+  border: 1px solid var(--border, #444);
+  border-radius: 6px;
+}
+.az-chart-legend b { color: #ddd; }
+.az-chart-legend i { color: #9af; font-style: normal; }
+.az-legend-dot {
+  display: inline-block;
+  width: 0.65em;
+  height: 0.65em;
+  border-radius: 50%;
+  margin-right: 0.4em;
+  vertical-align: middle;
 }
 .az-probe { font-family: monospace; font-size: 0.85rem; }
 .probe-title { color: #888; margin-bottom: 0.5rem; }

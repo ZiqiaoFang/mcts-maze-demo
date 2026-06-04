@@ -119,8 +119,21 @@
     </main>
 
     <section class="az-charts">
-      <canvas id="az-chart-z" width="380" height="180"></canvas>
-      <canvas id="az-chart-loss" width="380" height="180"></canvas>
+      <div class="az-chart-cell">
+        <canvas id="az-chart-z" width="380" height="180"></canvas>
+        <div class="az-chart-legend">
+          <span><span class="az-legend-dot" style="background:#888"></span><b>raw</b> — z from each individual game</span>
+          <span><span class="az-legend-dot" style="background:#6ab0ff"></span><b>ma</b> — moving average of z over last 20 games</span>
+        </div>
+      </div>
+      <div class="az-chart-cell">
+        <canvas id="az-chart-loss" width="380" height="180"></canvas>
+        <div class="az-chart-legend">
+          <span><span class="az-legend-dot" style="background:#6ab0ff"></span><b>total</b> — full SGD target: policy + value + L2 reg</span>
+          <span><span class="az-legend-dot" style="background:#ffb86b"></span><b>policy</b> — cross-entropy: how well <i>p(a|s)</i> matches the MCTS-improved π</span>
+          <span><span class="az-legend-dot" style="background:#f06b6b"></span><b>value</b> — MSE: how well <i>v(s)</i> predicts the game outcome z</span>
+        </div>
+      </div>
       <div id="az-probe" class="az-probe"></div>
     </section>
 
