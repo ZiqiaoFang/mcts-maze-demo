@@ -127,3 +127,142 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 #ctl-reward-formula.invalid { border-color: #ef4444; }
 .formula-group { gap: 0.5rem; }
+
+#tab-bar {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem 0;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border, #444);
+}
+.tab-btn {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid var(--border, #444);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.tab-btn.active {
+  background: var(--bg-elev, #2a2a2a);
+  font-weight: 600;
+}
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+.az-header {
+  padding: 0.5rem 1rem;
+}
+#az-status-bar {
+  display: flex;
+  gap: 1.25rem;
+  font-family: monospace;
+  font-size: 0.9rem;
+}
+#az-overlay-toggle {
+  padding: 0 1rem 0.5rem;
+  font-size: 0.85rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+#az-overlay-toggle label {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+.az-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0 1rem;
+}
+.az-maze-pane, .az-tree-pane {
+  background: var(--bg-elev, #222);
+  border: 1px solid var(--border, #444);
+  border-radius: 6px;
+}
+.az-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  align-items: start;
+}
+.az-chart-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.az-chart-cell canvas,
+.az-probe {
+  background: var(--bg-elev, #222);
+  border: 1px solid var(--border, #444);
+  border-radius: 6px;
+  padding: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+.az-chart-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.3rem 0.5rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: #bbb;
+  background: var(--bg-elev, #222);
+  border: 1px solid var(--border, #444);
+  border-radius: 6px;
+}
+.az-chart-legend b { color: #ddd; }
+.az-chart-legend i { color: #9af; font-style: normal; }
+.az-legend-dot {
+  display: inline-block;
+  width: 0.65em;
+  height: 0.65em;
+  border-radius: 50%;
+  margin-right: 0.4em;
+  vertical-align: middle;
+}
+.az-probe { font-family: monospace; font-size: 0.85rem; }
+.probe-title { color: #888; margin-bottom: 0.5rem; }
+.probe-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+.probe-label { width: 3.5em; }
+.probe-bar { flex: 1; background: #333; height: 0.75em; border-radius: 3px; overflow: hidden; }
+.probe-fill { height: 100%; background: #6ab0ff; width: 0; transition: width 120ms; }
+.probe-pct { width: 2.75em; text-align: right; color: #ccc; }
+.probe-v { margin-top: 0.5rem; color: #ccc; }
+.az-controls {
+  padding: 0.5rem 1rem 1rem;
+}
+.az-controls .control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+.az-progress {
+  padding: 0 1rem 0.5rem;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #aaa;
+}
+.az-progress.idle .az-progress-fill { background: #444; width: 0 !important; }
+.az-progress-label { margin-bottom: 0.25rem; }
+.az-progress-track {
+  background: #2a2a2a;
+  border: 1px solid var(--border, #444);
+  height: 0.6em;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.az-progress-fill {
+  height: 100%;
+  background: #6ab0ff;
+  width: 0;
+  transition: width 80ms linear;
+}

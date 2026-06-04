@@ -5,9 +5,17 @@
   <title>MCTS Maze Demo</title>
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@4.22.0/dist/tf-backend-webgpu.min.js" defer></script>
   <script type="module" src="src/app.js" defer></script>
 </head>
 <body>
+  <div id="tab-bar">
+    <button class="tab-btn active" data-tab="classic">Classic MCTS</button>
+    <button class="tab-btn" data-tab="az">AlphaZero MCTS</button>
+  </div>
+
+  <div id="tab-classic" class="tab-pane active">
   <header>
     <h1>MCTS Maze Demo</h1>
     <div id="status-bar">
@@ -71,5 +79,102 @@
   <button id="debug-bench">Run 1000 iterations (benchmark)</button>
   <pre id="debug-bench-out"></pre>
 </aside>
+  </div>
+  <div id="tab-az" class="tab-pane">
+    <header class="az-header">
+      <div id="az-status-bar">
+        <span>Games: <span id="az-games">0</span></span>
+        <span>Latest z: <span id="az-latest-z">—</span></span>
+        <span>z̄(20): <span id="az-avg-z">—</span></span>
+        <span>Loss: <span id="az-loss">—</span></span>
+        <span>Buffer: <span id="az-buf">0</span></span>
+        <span>Backend: <span id="az-backend">—</span></span>
+      </div>
+    </header>
+
+    <div id="az-overlay-toggle">
+      Overlay:
+      <label><input type="radio" name="az-overlay" value="v" checked /> v(s) heatmap</label>
+      <label><input type="radio" name="az-overlay" value="p" /> p(a|s) arrows</label>
+      <label><input type="radio" name="az-overlay" value="visits" /> MCTS visits</label>
+      <label><input type="radio" name="az-overlay" value="off" /> off</label>
+    </div>
+
+    <div id="az-progress" class="az-progress idle">
+      <div class="az-progress-label">
+        <span id="az-progress-text">idle</span>
+      </div>
+      <div class="az-progress-track">
+        <div class="az-progress-fill" id="az-progress-fill"></div>
+      </div>
+    </div>
+
+    <main class="az-main">
+      <section class="az-maze-pane">
+        <canvas id="az-maze-canvas" width="600" height="600"></canvas>
+      </section>
+      <section class="az-tree-pane">
+        <svg id="az-tree-svg" width="600" height="600"></svg>
+      </section>
+    </main>
+
+    <section class="az-charts">
+      <div class="az-chart-cell">
+        <canvas id="az-chart-z" width="380" height="180"></canvas>
+        <div class="az-chart-legend">
+          <span><span class="az-legend-dot" style="background:#888"></span><b>raw</b> — z from each individual game</span>
+          <span><span class="az-legend-dot" style="background:#6ab0ff"></span><b>ma</b> — moving average of z over last 20 games</span>
+        </div>
+      </div>
+      <div class="az-chart-cell">
+        <canvas id="az-chart-loss" width="380" height="180"></canvas>
+        <div class="az-chart-legend">
+          <span><span class="az-legend-dot" style="background:#6ab0ff"></span><b>total</b> — full SGD target: policy + value + L2 reg</span>
+          <span><span class="az-legend-dot" style="background:#ffb86b"></span><b>policy</b> — cross-entropy: how well <i>p(a|s)</i> matches the MCTS-improved π</span>
+          <span><span class="az-legend-dot" style="background:#f06b6b"></span><b>value</b> — MSE: how well <i>v(s)</i> predicts the game outcome z</span>
+        </div>
+      </div>
+      <div id="az-probe" class="az-probe"></div>
+    </section>
+
+    <footer class="az-controls">
+      <div class="control-row">
+        <label>Maze size:
+          <select id="az-ctl-size">
+            <option value="10" selected>10×10</option>
+            <option value="15">15×15</option>
+            <option value="20">20×20</option>
+          </select>
+        </label>
+        <label class="formula-group">z formula:
+          <input type="text" id="az-ctl-z-formula" spellcheck="false" autocomplete="off" />
+          <select id="az-ctl-z-preset" title="Load a preset">
+            <option value="" disabled selected>Presets ▾</option>
+            <option value="Pure win/loss">Pure win/loss</option>
+            <option value="Distance-shaped">Distance-shaped</option>
+            <option value="Step penalty">Step penalty</option>
+          </select>
+        </label>
+      </div>
+      <div class="control-row">
+        <label>c_puct: <input type="range" id="az-ctl-cpuct" min="0.1" max="4" step="0.05" value="1.0" />
+          <span id="az-ctl-cpuct-val">1.00</span>
+        </label>
+        <label>MCTS sims/move: <input type="range" id="az-ctl-sims" min="10" max="400" step="10" value="50" />
+          <span id="az-ctl-sims-val">50</span>
+        </label>
+        <label>Learning rate (log10): <input type="range" id="az-ctl-lr" min="-5" max="-2" step="0.1" value="-3" />
+          <span id="az-ctl-lr-val">1e-3</span>
+        </label>
+      </div>
+      <div class="control-row">
+        <button id="az-btn-step">Self-play step</button>
+        <button id="az-btn-run10">Run 10</button>
+        <button id="az-btn-runcont">Run continuously</button>
+        <button id="az-btn-reset-mcts">Reset MCTS</button>
+        <button id="az-btn-reset-net">Reset network</button>
+      </div>
+    </footer>
+  </div>
 </body>
 </html>
