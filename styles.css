@@ -215,3 +215,24 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   margin-bottom: 0.5rem;
   align-items: center;
 }
+.az-progress {
+  padding: 0 1rem 0.5rem;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: #aaa;
+}
+.az-progress.idle .az-progress-fill { background: #444; width: 0 !important; }
+.az-progress-label { margin-bottom: 0.25rem; }
+.az-progress-track {
+  background: #2a2a2a;
+  border: 1px solid var(--border, #444);
+  height: 0.6em;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.az-progress-fill {
+  height: 100%;
+  background: #6ab0ff;
+  width: 0;
+  transition: width 80ms linear;
+}

@@ -113,7 +113,10 @@ export async function initAzTab() {
     renderCharts();
   });
 
-  stepBtn.addEventListener("click", () => runSelfPlayStep(mazeRenderer));
+  stepBtn.addEventListener("click", async () => {
+    await runSelfPlayStep(mazeRenderer);
+    setIdleProgress();
+  });
   run10Btn.addEventListener("click", () => runMany(10, mazeRenderer));
   runContBtn.addEventListener("click", () => toggleContinuous(runContBtn, mazeRenderer));
   resetMctsBtn.addEventListener("click", () => {
@@ -173,10 +176,11 @@ async function runSelfPlayStep(mazeRenderer) {
   const maze = currentMaze();
   const network = { predict: (m, pos) => predict(state.model, m, pos) };
   const maxSteps = state.size * 4;
-  const result = playOneGame({
+  const result = await playOneGame({
     maze, network, zFn: state.zFn,
     simsPerMove: state.simsPerMove, cPuct: state.cPuct,
     maxSteps, temperatureMoves: 5,
+    onProgress: (ev) => updateProgress(ev),
   });
   for (const t of result.trajectory) {
     state.buffer.append({ state: t.state, pi: t.pi, z: result.z });
@@ -207,21 +211,57 @@ async function runSelfPlayStep(mazeRenderer) {
 }
 
 async function runMany(N, mazeRenderer) {
+  state.loopActive = N;
+  state.loopDone = 0;
   for (let i = 0; i < N; i++) {
+    state.loopDone = i;
     await runSelfPlayStep(mazeRenderer);
-    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => setTimeout(r, 0));
   }
+  state.loopActive = null;
+  setIdleProgress();
 }
 
 async function toggleContinuous(btn, mazeRenderer) {
   if (state.running) { state.running = false; btn.textContent = "Run continuously"; return; }
   state.running = true;
   btn.textContent = "Stop";
+  state.loopActive = Infinity;
+  state.loopDone = 0;
   while (state.running) {
     await runSelfPlayStep(mazeRenderer);
-    await new Promise((r) => requestAnimationFrame(r));
+    state.loopDone += 1;
+    await new Promise((r) => setTimeout(r, 0));
   }
+  state.loopActive = null;
+  setIdleProgress();
   btn.textContent = "Run continuously";
+}
+
+function updateProgress({ move, maxSteps }) {
+  const fill = document.getElementById("az-progress-fill");
+  const text = document.getElementById("az-progress-text");
+  const root = document.getElementById("az-progress");
+  root.classList.remove("idle");
+  const pct = Math.min(100, ((move + 1) / maxSteps) * 100);
+  fill.style.width = `${pct.toFixed(1)}%`;
+  let prefix = "";
+  if (state.loopActive === Infinity) {
+    prefix = `game ${state.loopDone + 1} (running) · `;
+  } else if (state.loopActive && state.loopActive > 1) {
+    prefix = `game ${state.loopDone + 1} / ${state.loopActive} · `;
+  }
+  text.textContent = `${prefix}move ${move + 1} / ${maxSteps}`;
+}
+
+function setIdleProgress() {
+  const root = document.getElementById("az-progress");
+  const fill = document.getElementById("az-progress-fill");
+  const text = document.getElementById("az-progress-text");
+  if (!root || !fill || !text) return;
+  root.classList.add("idle");
+  fill.style.width = "0%";
+  text.textContent = "idle";
 }
 
 function updateStatusBar() {

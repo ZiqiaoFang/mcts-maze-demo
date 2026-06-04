@@ -63,10 +63,13 @@ function sampleAction(pi, temperature, rng) {
 //   maze, network, zFn, simsPerMove, cPuct, maxSteps,
 //   temperatureMoves (number of leading moves to sample at T=1; rest at T=0),
 //   rng (optional, defaults to Math.random)
-export function playOneGame(opts) {
+//   onProgress (optional, called before each move with {move, maxSteps, pos}).
+//               If provided, the loop also yields to the event loop between
+//               moves so the UI stays responsive and the callback can render.
+export async function playOneGame(opts) {
   const {
     maze, network, zFn, simsPerMove, cPuct,
-    maxSteps, temperatureMoves, rng = Math.random,
+    maxSteps, temperatureMoves, rng = Math.random, onProgress = null,
   } = opts;
   let pos = [...maze.start];
   const trajectory = [];
@@ -75,6 +78,12 @@ export function playOneGame(opts) {
   let lastMcts = null;
   for (; t < maxSteps; t++) {
     if (maze.isGoal(pos)) { reachedGoal = true; break; }
+    if (onProgress) {
+      onProgress({ move: t, maxSteps, pos });
+      // Yield once per move so progress UI repaints. Cheap: setTimeout(0)
+      // gives the browser a turn without dropping into rAF throttling.
+      await new Promise((r) => setTimeout(r, 0));
+    }
     const mcts = new AZMCTS(maze, network, { cPuct, startPos: pos });
     for (let s = 0; s < simsPerMove; s++) mcts.iterate();
     lastMcts = mcts;

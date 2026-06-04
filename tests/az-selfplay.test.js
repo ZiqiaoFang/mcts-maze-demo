@@ -53,8 +53,8 @@ const STUB = { predict: () => ({ p: new Float32Array([0.25, 0.25, 0.25, 0.25]), 
 // z formula: 1 if reached goal, 0 otherwise.
 const Z_FN = (ctx) => (ctx.isGoal ? 1 : 0);
 
-test("playOneGame terminates within step cap and returns trajectory + z", () => {
-  const result = playOneGame({
+test("playOneGame terminates within step cap and returns trajectory + z", async () => {
+  const result = await playOneGame({
     maze, network: STUB, zFn: Z_FN, simsPerMove: 20, cPuct: 1.0,
     maxSteps: 8, temperatureMoves: 0, rng: Math.random,
   });
@@ -66,5 +66,21 @@ test("playOneGame terminates within step cap and returns trajectory + z", () => 
   for (const t of result.trajectory) {
     assert.ok(t.state instanceof Float32Array);
     assert.equal(t.pi.length, 4);
+  }
+});
+
+test("playOneGame calls onProgress for each move and yields to event loop", async () => {
+  const progressCalls = [];
+  const result = await playOneGame({
+    maze, network: STUB, zFn: Z_FN, simsPerMove: 5, cPuct: 1.0,
+    maxSteps: 6, temperatureMoves: 0, rng: Math.random,
+    onProgress: (ev) => progressCalls.push({ move: ev.move, maxSteps: ev.maxSteps }),
+  });
+  // Called once per move before its MCTS runs; never after the loop ends.
+  assert.ok(progressCalls.length > 0);
+  assert.ok(progressCalls.length <= result.trajectory.length);
+  for (let i = 0; i < progressCalls.length; i++) {
+    assert.equal(progressCalls[i].move, i);
+    assert.equal(progressCalls[i].maxSteps, 6);
   }
 });
