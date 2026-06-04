@@ -2,6 +2,43 @@
 // Assumes the `tf` global is available (loaded via CDN in index.html).
 import { CHANNELS, encodeState } from "./az-encode.js";
 
+// Pick the fastest available TF.js backend for this workload.
+// Counterintuitive note: for MCTS we run ~50 simulations per move, each doing
+// a single-sample forward pass through an 80k-param MLP. At that batch size,
+// WebGL beats WebGPU because WebGPU's per-call overhead doesn't amortize.
+// Measured locally on the 10×10 maze: 1.73 ms/predict on WebGL vs 2.97 on
+// WebGPU. So we prefer webgl → webgpu → cpu.
+export async function setupBackend() {
+  if (typeof tf === "undefined") return null;
+  const tryBackend = async (name) => {
+    try {
+      const ok = await tf.setBackend(name);
+      if (!ok) return false;
+      await tf.ready();
+      return tf.getBackend() === name;
+    } catch (e) {
+      return false;
+    }
+  };
+  if (await tryBackend("webgl")) return "webgl";
+  if (await tryBackend("webgpu")) return "webgpu";
+  await tryBackend("cpu");
+  return tf.getBackend();
+}
+
+// Pre-compile model shaders by running one throwaway forward pass.
+// Without this, the first real predict() takes 100-500ms while WebGL/WebGPU
+// compiles shaders — visible as a freeze on the first click.
+export function warmupModel(model, size) {
+  const inputDim = size * size * CHANNELS;
+  tf.tidy(() => {
+    const dummy = tf.zeros([1, inputDim]);
+    const [p, v] = model.predict(dummy);
+    p.dataSync();
+    v.dataSync();
+  });
+}
+
 // Build a 2-hidden-layer MLP with two output heads.
 // Input: flat [size*size*CHANNELS]
 // Hidden: 64 → 64 (relu)

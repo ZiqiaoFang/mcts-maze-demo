@@ -2,7 +2,7 @@ import { MAZES, regenerateMaze } from "./maze.js";
 import { ACTIONS } from "./maze.js";
 import { MazeRenderer } from "./render-maze.js";
 import { compileReward } from "./reward.js";
-import { createModel, predict, predictBatch, trainStep } from "./az-network.js";
+import { createModel, predict, predictBatch, trainStep, setupBackend, warmupModel } from "./az-network.js";
 import { AZMCTS } from "./az-mcts.js";
 import { ReplayBuffer, playOneGame } from "./az-selfplay.js";
 import { CHANNELS } from "./az-encode.js";
@@ -16,8 +16,10 @@ const Z_PRESETS = {
 };
 
 let state = null; // initialized inside initAzTab to defer TF.js access
+let activeBackend = null;
 
-export function initAzTab() {
+export async function initAzTab() {
+  activeBackend = await setupBackend();
   const sizeSel = document.getElementById("az-ctl-size");
   const zInput = document.getElementById("az-ctl-z-formula");
   const zPreset = document.getElementById("az-ctl-z-preset");
@@ -55,6 +57,7 @@ export function initAzTab() {
   state.probe = probe;
   state.treeRenderer = treeRenderer;
   state.zFn = compileReward(zInput.value);
+  warmupModel(state.model, state.size);
   renderMaze(mazeRenderer);
   renderCharts();
 
@@ -104,6 +107,7 @@ export function initAzTab() {
     zChart.clear();
     lossChart.clear();
     state.zFn = compileReward(zInput.value);
+    warmupModel(state.model, state.size);
     renderMaze(mazeRenderer);
     updateStatusBar();
     renderCharts();
@@ -128,6 +132,7 @@ export function initAzTab() {
     zChart.clear();
     lossChart.clear();
     state.zFn = compileReward(zInput.value);
+    warmupModel(state.model, state.size);
     renderMaze(mazeRenderer);
     updateStatusBar();
     renderCharts();
@@ -233,6 +238,7 @@ function updateStatusBar() {
   document.getElementById("az-loss").textContent =
     state.lastLosses ? state.lastLosses.total.toFixed(4) : "—";
   document.getElementById("az-buf").textContent = state.buffer.size();
+  document.getElementById("az-backend").textContent = activeBackend ?? "—";
 }
 
 function renderCharts() {
