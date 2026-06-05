@@ -297,11 +297,17 @@ async function runSelfPlayStep(mazeRenderer) {
     maze, network, zFn: state.zFn,
     simsPerMove: state.simsPerMove, cPuct: state.cPuct,
     maxSteps,
-    // In inference-only mode we want the policy's actual recommendation, not
-    // an exploration-noised version of it: no temperature sampling on early
-    // moves, no Dirichlet noise on the MCTS root prior.
+    // In inference-only mode we skip the network update but keep Dirichlet
+    // noise on the root prior. Without it, a confident trained policy looks
+    // ~one-hot, and PUCT scores the unfavored actions at literally zero —
+    // MCTS can't escape the prior and every game on the same maze produces
+    // the identical (possibly wrong) path. With noise the root prior gets
+    // perturbed per-move, so MCTS can explore alternatives and use the
+    // network as a *prior* rather than as an oracle. Temperature stays 0
+    // (argmax over visit counts) so the policy's best recommendation still
+    // wins when MCTS agrees with it.
     temperatureMoves: state.inferenceOnly ? 0 : 5,
-    dirichletAlpha: state.inferenceOnly ? null : 0.3,
+    dirichletAlpha: 0.3,
     dirichletEpsilon: 0.25,
     onProgress: (ev) => updateProgress(ev),
   });
