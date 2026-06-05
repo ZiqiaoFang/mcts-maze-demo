@@ -2,6 +2,49 @@ import { ACTIONS } from "./maze.js";
 
 const actionKey = ([dr, dc]) => `${dr},${dc}`;
 
+// Standard normal via Box-Muller. rng() must return uniform [0,1).
+function randn(rng) {
+  const u1 = Math.max(1e-12, rng());
+  const u2 = rng();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+// Sample Gamma(shape=α, scale=1) via Marsaglia-Tsang. For α<1 boost
+// by U^(1/α) per the standard trick (Marsaglia & Tsang 2000 §6).
+function sampleGamma(alpha, rng) {
+  if (alpha < 1) {
+    const g = sampleGamma(alpha + 1, rng);
+    const u = Math.max(1e-12, rng());
+    return g * Math.pow(u, 1 / alpha);
+  }
+  const d = alpha - 1 / 3;
+  const c = 1 / Math.sqrt(9 * d);
+  while (true) {
+    let x, v;
+    do {
+      x = randn(rng);
+      v = 1 + c * x;
+    } while (v <= 0);
+    v = v * v * v;
+    const u = rng();
+    if (u < 1 - 0.0331 * x * x * x * x) return d * v;
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+  }
+}
+
+// Dirichlet(α, α, …, α) sample of length k. Uses the standard ratio-of-Gammas
+// construction: y_i ~ Gamma(α, 1), x_i = y_i / Σ y_j.
+function sampleDirichlet(alpha, k, rng) {
+  const y = new Array(k);
+  let sum = 0;
+  for (let i = 0; i < k; i++) {
+    y[i] = sampleGamma(alpha, rng);
+    sum += y[i];
+  }
+  for (let i = 0; i < k; i++) y[i] /= sum;
+  return y;
+}
+
 // Monotonic id so TreeRenderer's d3 key function can distinguish nodes.
 // Without this every node's id is undefined → d3 dedups them and the tree
 // pane renders only the root group with no children.
@@ -61,6 +104,12 @@ export class AZMCTS {
     const startPos = config.startPos ?? maze.start;
     this.root = new AZNode([...startPos], null, null, 1);
     this.iterationCount = 0;
+    // Dirichlet noise at the root prior. AlphaZero adds this in self-play so
+    // a saturated policy can't lock MCTS onto one branch. Default off so
+    // evaluation/inference paths get no noise.
+    this.dirichletAlpha = config.dirichletAlpha ?? null;
+    this.dirichletEpsilon = config.dirichletEpsilon ?? 0.25;
+    this.rng = config.rng ?? Math.random;
   }
 
   // One PUCT-MCTS simulation.
@@ -108,6 +157,15 @@ export class AZMCTS {
         for (const item of legal) item.prior = 1 / Math.max(1, legal.length);
       } else {
         for (const item of legal) item.prior = item.prior / priorSum;
+      }
+      // Dirichlet noise at the root only. legal.length > 1 because mixing
+      // noise into a 1-element distribution is a no-op (1*α + (1-α)*1 = 1).
+      if (node === this.root && this.dirichletAlpha !== null && legal.length > 1) {
+        const noise = sampleDirichlet(this.dirichletAlpha, legal.length, this.rng);
+        const eps = this.dirichletEpsilon;
+        for (let i = 0; i < legal.length; i++) {
+          legal[i].prior = (1 - eps) * legal[i].prior + eps * noise[i];
+        }
       }
       for (const { a, prior } of legal) {
         const child = new AZNode(this.maze.step(node.position, a), node, a, prior);

@@ -1,6 +1,7 @@
 import { AZMCTS } from "./az-mcts.js";
 import { ACTIONS } from "./maze.js";
 import { encodeState, CHANNELS } from "./az-encode.js";
+import { computeReward } from "./reward.js";
 
 // Replay buffer with FIFO eviction.
 export class ReplayBuffer {
@@ -63,6 +64,7 @@ function sampleAction(pi, temperature, rng) {
 //   maze, network, zFn, simsPerMove, cPuct, maxSteps,
 //   temperatureMoves (number of leading moves to sample at T=1; rest at T=0),
 //   rng (optional, defaults to Math.random)
+//   dirichletAlpha, dirichletEpsilon (optional, AlphaZero root-prior noise)
 //   onProgress (optional, called before each move with {move, maxSteps, pos}).
 //               If provided, the loop also yields to the event loop between
 //               moves so the UI stays responsive and the callback can render.
@@ -70,6 +72,7 @@ export async function playOneGame(opts) {
   const {
     maze, network, zFn, simsPerMove, cPuct,
     maxSteps, temperatureMoves, rng = Math.random, onProgress = null,
+    dirichletAlpha = null, dirichletEpsilon = 0.25,
   } = opts;
   let pos = [...maze.start];
   const trajectory = [];
@@ -89,7 +92,9 @@ export async function playOneGame(opts) {
       // gives the browser a turn without dropping into rAF throttling.
       await new Promise((r) => setTimeout(r, 0));
     }
-    const mcts = new AZMCTS(maze, network, { cPuct, startPos: pos });
+    const mcts = new AZMCTS(maze, network, {
+      cPuct, startPos: pos, dirichletAlpha, dirichletEpsilon, rng,
+    });
     for (let s = 0; s < simsPerMove; s++) mcts.iterate();
     lastMcts = mcts;
     // Fold this move's visits into the running per-cell totals.
@@ -109,6 +114,11 @@ export async function playOneGame(opts) {
     steps: trajectory.length,
     startDist: maze.manhattan(maze.start, maze.goal),
   };
-  const z = zFn(ctx);
+  // compileReward returns a function taking POSITIONAL args
+  // (isGoal, dist, maxDist, steps, startDist). Calling zFn(ctx) would bind
+  // the whole ctx object to `isGoal` (truthy), making every game collapse to
+  // the goal branch. Route through computeReward, which destructures ctx and
+  // guards against NaN — same path classic-tab uses.
+  const z = computeReward(zFn, ctx);
   return { trajectory, z, steps: trajectory.length, reachedGoal, lastMcts, cumulativeVisits };
 }

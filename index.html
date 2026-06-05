@@ -168,11 +168,24 @@
         </label>
       </div>
       <div class="control-row">
+        <label title="Regenerate the maze layout at the start of every self-play game. Forces the network to learn maze structure rather than memorize one layout — essential for generalization across mazes.">
+          <input type="checkbox" id="az-ctl-randomize" /> Randomize maze each game
+        </label>
+        <label title="Play games using the trained network without updating it (no training step, no replay-buffer append). Disables Dirichlet noise and temperature sampling so MCTS reflects the policy's actual recommendation. Use this to evaluate generalization on unseen mazes after training.">
+          <input type="checkbox" id="az-ctl-inference" /> Inference only (no training)
+        </label>
+      </div>
+      <div class="control-row">
         <button id="az-btn-step">Self-play step</button>
         <button id="az-btn-run10">Run 10</button>
         <button id="az-btn-runcont">Run continuously</button>
         <button id="az-btn-reset-mcts">Reset MCTS</button>
         <button id="az-btn-reset-net">Reset network</button>
+        <button id="az-btn-save" title="Save the current network weights to browser localStorage, keyed by maze size.">Save weights</button>
+        <button id="az-btn-load" title="Load weights previously saved for the current maze size. Replaces the live network.">Load weights</button>
+        <button id="az-btn-download" title="Download the network as portable files (model.json + .bin). Use to snapshot trained networks or move them between machines.">Download weights</button>
+        <button id="az-btn-upload" title="Upload weights previously downloaded. Pick both the .json topology file AND the .bin weights file in the dialog.">Upload weights</button>
+        <input type="file" id="az-file-upload" multiple accept=".json,.bin" style="display:none" />
       </div>
     </footer>
   </div>

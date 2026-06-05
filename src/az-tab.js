@@ -29,6 +29,13 @@ export async function initAzTab() {
   const simsVal = document.getElementById("az-ctl-sims-val");
   const lrSlider = document.getElementById("az-ctl-lr");
   const lrVal = document.getElementById("az-ctl-lr-val");
+  const randomizeChk = document.getElementById("az-ctl-randomize");
+  const inferenceChk = document.getElementById("az-ctl-inference");
+  const saveBtn = document.getElementById("az-btn-save");
+  const loadBtn = document.getElementById("az-btn-load");
+  const downloadBtn = document.getElementById("az-btn-download");
+  const uploadBtn = document.getElementById("az-btn-upload");
+  const uploadInput = document.getElementById("az-file-upload");
   const stepBtn = document.getElementById("az-btn-step");
   const run10Btn = document.getElementById("az-btn-run10");
   const runContBtn = document.getElementById("az-btn-runcont");
@@ -79,6 +86,91 @@ export async function initAzTab() {
     state.optimizer = tf.train.adam(lr);
     lrVal.textContent = lr.toExponential(1);
   });
+  randomizeChk.addEventListener("change", () => {
+    state.randomizeMaze = randomizeChk.checked;
+  });
+  inferenceChk.addEventListener("change", () => {
+    state.inferenceOnly = inferenceChk.checked;
+  });
+  saveBtn.addEventListener("click", async () => {
+    const key = `localstorage://az-model-${state.size}x${state.size}`;
+    try {
+      await state.model.save(key);
+      alert(`Saved weights to ${key}`);
+    } catch (err) {
+      alert(`Save failed: ${err.message}`);
+    }
+  });
+  loadBtn.addEventListener("click", async () => {
+    const key = `localstorage://az-model-${state.size}x${state.size}`;
+    try {
+      const loaded = await tf.loadLayersModel(key);
+      // Replace the live model. Dispose the old one so its WebGL textures
+      // don't leak; the optimizer's Adam state is implicitly reset, which is
+      // the right thing (its momentum was tied to the previous weights).
+      state.model.dispose();
+      state.model = loaded;
+      warmupModel(state.model, state.size);
+      updateProbe();
+      renderMaze(mazeRenderer);
+      alert(`Loaded weights from ${key}`);
+    } catch (err) {
+      alert(`Load failed: ${err.message}\n(No saved model for ${state.size}×${state.size}?)`);
+    }
+  });
+  // Portable file-based save/load. TF.js downloads model.json (topology +
+  // weight manifest) and a separate .bin with the actual weight bytes. Both
+  // files are needed at upload time — we accept multiple files and route the
+  // .json + .bin pair into tf.io.browserFiles.
+  downloadBtn.addEventListener("click", async () => {
+    try {
+      await state.model.save(`downloads://az-model-${state.size}x${state.size}`);
+    } catch (err) {
+      alert(`Download failed: ${err.message}`);
+    }
+  });
+  uploadBtn.addEventListener("click", () => uploadInput.click());
+  uploadInput.addEventListener("change", async (e) => {
+    const files = Array.from(e.target.files);
+    const jsonFile = files.find((f) => f.name.endsWith(".json"));
+    const binFiles = files.filter((f) => f.name.endsWith(".bin"));
+    if (!jsonFile || binFiles.length === 0) {
+      alert("Pick both the .json topology file AND the .bin weights file.");
+      e.target.value = "";
+      return;
+    }
+    try {
+      const loaded = await tf.loadLayersModel(
+        tf.io.browserFiles([jsonFile, ...binFiles]),
+      );
+      // Shape check: a .json saved from a different maze size will have a
+      // mismatched input dim. loadLayersModel itself doesn't validate this
+      // against the *current* maze; we compare the input shape against the
+      // size dropdown so the user gets a useful error before it fails on
+      // first predict.
+      const expectedDim = state.size * state.size * CHANNELS;
+      const actualShape = loaded.inputs[0].shape;
+      const actualDim = actualShape[actualShape.length - 1];
+      if (actualDim !== expectedDim) {
+        loaded.dispose();
+        alert(
+          `Architecture mismatch: uploaded model has input dim ${actualDim}, current maze size needs ${expectedDim}. Switch the maze-size dropdown to match the saved model first.`,
+        );
+        e.target.value = "";
+        return;
+      }
+      state.model.dispose();
+      state.model = loaded;
+      warmupModel(state.model, state.size);
+      updateProbe();
+      renderMaze(mazeRenderer);
+      alert(`Loaded ${jsonFile.name}`);
+    } catch (err) {
+      alert(`Upload failed: ${err.message}`);
+    }
+    // Reset so re-picking the same file fires the change event again.
+    e.target.value = "";
+  });
   zPreset.addEventListener("change", () => {
     const key = zPreset.value;
     if (!key) return;
@@ -106,6 +198,8 @@ export async function initAzTab() {
     state.zChart = zChart;
     state.lossChart = lossChart;
     state.probe = probe;
+    state.randomizeMaze = randomizeChk.checked;
+    state.inferenceOnly = inferenceChk.checked;
     treeRenderer = new TreeRenderer(document.getElementById("az-tree-svg"));
     state.treeRenderer = treeRenderer;
     zChart.clear();
@@ -134,6 +228,8 @@ export async function initAzTab() {
     state.zChart = zChart;
     state.lossChart = lossChart;
     state.probe = probe;
+    state.randomizeMaze = randomizeChk.checked;
+    state.inferenceOnly = inferenceChk.checked;
     treeRenderer = new TreeRenderer(document.getElementById("az-tree-svg"));
     state.treeRenderer = treeRenderer;
     zChart.clear();
@@ -165,34 +261,70 @@ function freshState(size, lr) {
     simsPerMove: 50,
     optimizer: tf.train.adam(lr),
     model: createModel(size),
-    buffer: new ReplayBuffer(10000),
+    // 50k entries ≈ 1,250 games' worth of trajectories on 10×10 (~60 MB) —
+    // enough layout diversity for domain randomization to actually train a
+    // general policy rather than memorize the last few hundred mazes.
+    buffer: new ReplayBuffer(50000),
     gamesPlayed: 0,
     latestZ: NaN,
     zHistory: [],
     lastLosses: null,
     zFn: null,
     running: false,
+    // Domain randomization: when on, runSelfPlayStep regenerates the maze
+    // layout before every game. Combined with the CNN backbone, this is what
+    // forces the network to learn translation-equivariant maze structure
+    // rather than memorizing one specific layout.
+    randomizeMaze: false,
+    // Inference-only: play games with the trained network but don't update
+    // it. Skips both the replay-buffer append and the gradient step.
+    inferenceOnly: false,
   };
 }
 
 async function runSelfPlayStep(mazeRenderer) {
   if (!state.zFn) return;
+  if (state.randomizeMaze) {
+    // Fresh layout per game. Stale per-cell visit overlays from the previous
+    // maze would be meaningless on the new layout, so drop them.
+    regenerateMaze(state.size);
+    state.cumulativeVisits = new Map();
+  }
   const maze = currentMaze();
   const network = { predict: (m, pos) => predict(state.model, m, pos) };
   const maxSteps = state.size * 4;
   const result = await playOneGame({
     maze, network, zFn: state.zFn,
     simsPerMove: state.simsPerMove, cPuct: state.cPuct,
-    maxSteps, temperatureMoves: 5,
+    maxSteps,
+    // In inference-only mode we want the policy's actual recommendation, not
+    // an exploration-noised version of it: no temperature sampling on early
+    // moves, no Dirichlet noise on the MCTS root prior.
+    temperatureMoves: state.inferenceOnly ? 0 : 5,
+    dirichletAlpha: state.inferenceOnly ? null : 0.3,
+    dirichletEpsilon: 0.25,
     onProgress: (ev) => updateProgress(ev),
   });
-  for (const t of result.trajectory) {
-    state.buffer.append({ state: t.state, pi: t.pi, z: result.z });
-  }
-  if (state.buffer.size() >= 32) {
-    const inputDim = state.size * state.size * CHANNELS;
-    const batch = state.buffer.sampleBatch(32, inputDim);
-    state.lastLosses = trainStep(state.model, state.optimizer, batch, inputDim);
+  // Inference-only games never touch the replay buffer or the network. This
+  // keeps the buffer's distribution purely from training games, so toggling
+  // training back on later doesn't ingest a batch of evaluation trajectories
+  // played under different (no-noise, greedy) conditions.
+  if (!state.inferenceOnly) {
+    for (const t of result.trajectory) {
+      state.buffer.append({ state: t.state, pi: t.pi, z: result.z });
+    }
+    if (state.buffer.size() >= 32) {
+      const inputDim = state.size * state.size * CHANNELS;
+      // 4 gradient steps per game. MCTS is the expensive part (50 sims × ~20
+      // moves of network calls); replaying 4 small batches off the buffer is
+      // ~4× cheaper than another game but compounds with the larger buffer
+      // to get more learning out of each trajectory. Loss recorded is the
+      // final step's, so the chart still shows the most recent state.
+      for (let k = 0; k < 4; k++) {
+        const batch = state.buffer.sampleBatch(32, inputDim);
+        state.lastLosses = trainStep(state.model, state.optimizer, batch, inputDim);
+      }
+    }
   }
   state.gamesPlayed += 1;
   state.latestZ = result.z;
@@ -286,7 +418,8 @@ function updateStatusBar() {
   }
   document.getElementById("az-loss").textContent =
     state.lastLosses ? state.lastLosses.total.toFixed(4) : "—";
-  document.getElementById("az-buf").textContent = state.buffer.size();
+  document.getElementById("az-buf").textContent =
+    `${state.buffer.size()} / ${state.buffer.capacity}`;
   document.getElementById("az-backend").textContent = activeBackend ?? "—";
 }
 
